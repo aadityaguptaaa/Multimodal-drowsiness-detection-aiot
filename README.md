@@ -356,12 +356,12 @@ All 9 test modules pass with complete coverage across edge scenarios (glare, sud
 
 ---
 
-## 👥 Contributors & Institutional Affiliation
+## 👥 Contributor
 
 - **Lead Developer:** Aaditya Gupta ([@aadityaguptaaa](https://github.com/aadityaguptaaa))
 - **Institution:** SRM Institute of Science and Technology, Kattankulathur, Tamil Nadu
 - **Degree:** Bachelor of Technology in Computer Science and Engineering
-- **Supervisor:** Dr. Arokya Agustin S, Department of Mechanical Engineering
+
 
 ---
 
