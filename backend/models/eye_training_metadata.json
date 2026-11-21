@@ -1,0 +1,25 @@
+{
+  "model_architecture": "Lightweight ConvNet (3 Conv Blocks + GlobalAvgPool)",
+  "input_shape": [
+    64,
+    64,
+    3
+  ],
+  "classes": {
+    "open": 0,
+    "closed": 1
+  },
+  "training_mode": "FULL",
+  "total_dataset_images": 320,
+  "train_samples": 224,
+  "val_samples": 48,
+  "test_samples": 48,
+  "batch_size": 16,
+  "epochs_trained": 5,
+  "best_val_loss": 0.6932,
+  "best_val_accuracy": 0.4792,
+  "training_duration_sec": 7.07,
+  "saved_model_path": "D:\\Project\\AIoT-Drowsiness-Detection\\backend\\models\\eye_state_model.keras",
+  "created_at": "2026-10-15T23:26:02.377044",
+  "model_size_mb": 1.24
+}

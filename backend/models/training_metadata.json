@@ -1,0 +1,29 @@
+{
+  "model_architecture": "MobileNetV2 Transfer Learning",
+  "input_shape": [
+    224,
+    224,
+    3
+  ],
+  "classes": {
+    "Non Drowsy": 0,
+    "Drowsy": 1
+  },
+  "training_mode": "FULL_DATASET",
+  "total_dataset_images": 41792,
+  "train_samples": 29254,
+  "val_samples": 6269,
+  "test_samples": 6269,
+  "batch_size": 32,
+  "epochs_trained": 10,
+  "random_seed": 42,
+  "class_weights": {
+    "0": 1.0746455073102636,
+    "1": 0.9350508214536853
+  },
+  "model_size_mb": 22.77,
+  "training_duration_sec": 4588.09,
+  "saved_model_path": "D:\\Project\\AIoT-Drowsiness-Detection\\backend\\models\\drowsiness_model.keras",
+  "created_at": "2026-10-16T01:52:55.957107",
+  "notes": "Model trained genuinely on Driver Drowsiness Dataset (DDD). Input normalized to [-1, 1]. Best validation model saved via checkpointing."
+}

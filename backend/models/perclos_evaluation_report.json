@@ -1,0 +1,38 @@
+{
+  "status": "COMPLETED",
+  "model_type": "SVM",
+  "features": [
+    "perclos_ratio",
+    "mean_ear",
+    "min_ear",
+    "closed_duration_sec",
+    "blinks_per_minute",
+    "avg_blink_duration_ms",
+    "longest_closure_sec",
+    "ear_variance"
+  ],
+  "test_samples": 600,
+  "test_accuracy": 1.0,
+  "macro_f1": 1.0,
+  "drowsy_sensitivity_recall": 1.0,
+  "alert_specificity_recall": 1.0,
+  "per_class_metrics": {
+    "Alert": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "Drowsy": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  },
+  "confusion_matrix": {
+    "true_negatives": 300,
+    "false_positives": 0,
+    "false_negatives": 0,
+    "true_positives": 300
+  },
+  "literature_reference": "Kumar et al., 2023 - PERCLOS-Based ML Drowsiness Application (IJRASET)"
+}

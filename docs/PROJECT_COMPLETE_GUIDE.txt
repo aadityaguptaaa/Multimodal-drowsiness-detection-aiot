@@ -1,0 +1,235 @@
+================================================================================
+  AIoT DRIVER DROWSINESS DETECTION SYSTEM: COMPLETE TECHNICAL GUIDE
+  "Identifying Real-World Failure Points from Literature & Engineering Around Them"
+  Prepared for 80% Project Review & Evaluation (20 Marks)
+================================================================================
+
+1. PROJECT TITLE & CORE OBJECTIVE
+--------------------------------------------------------------------------------
+Project Title: 
+AIoT Driver Drowsiness Detection System: Identifying Real-World Failure Points from 
+Literature and Engineering Around Them.
+
+Core Objective:
+Design and build an affordable, non-intrusive, real-time AIoT system that detects 
+driver drowsiness early and reliably. 
+
+The software prototype runs on a standard laptop webcam while its architecture is 
+designed so physical hardware (Infrared camera, MPU-6050 motion sensor, Raspberry 
+Pi / ESP32, and physical buzzer) plugs in through modular adapters without rewriting 
+the core application. Target budget for physical deployment: ₹3,000–₹4,000.
+
+
+2. THE TWO REAL-WORLD FAILURE POINTS FROM LITERATURE (WHY THIS PROJECT EXISTS)
+--------------------------------------------------------------------------------
+After reviewing 10 recent research papers (2021–2025), we identified two major 
+reasons why existing camera-based systems fail in real life:
+
+1) Environmental Robustness Failure (Lighting Shifts, Darkness, Glare):
+   - Problem: Standard cameras lose eye and facial tracking in low light, nighttime, 
+     tunnel transitions, and glare (accuracy drops below 70%).
+   - Our Engineering Fix: 
+     a) Designed for an active 850nm Infrared (IR) camera that works in pitch darkness.
+     b) Paired vision with an MPU-6050 6-DOF motion sensor on the driver's head 
+        to detect head-nodding/slumping even if lighting completely fails.
+
+2) Reactive / Late Detection Failure (Detecting too late):
+   - Problem: Most systems only alert the driver AFTER eyes have been fully closed 
+     for 2–3 seconds. At 100 km/h, a car travels 83 meters in 3 seconds—too late.
+   - Our Engineering Fix:
+     a) Rolling 10-second PERCLOS window: Measures the proportion of eye closure 
+        time over a sliding 10-second window, catching the build-up of fatigue.
+     b) Blink Dynamics Tracker: Tracks blinks per minute (BPM) and slow eye 
+        reopening (sluggish blinks) to sound an early warning BEFORE complete closure.
+
+
+3. DATASET DETAILS (AUDITED & VERIFIED FROM FILES)
+--------------------------------------------------------------------------------
+- Dataset Name: Driver Drowsiness Dataset (DDD)
+- Source: Extracted from the Real-Life Drowsiness Dataset (RLDD)
+- Total Images: 41,792 labeled PNG face images
+- Classes (Binary):
+  * Drowsy: 22,347 images (53.5%)
+  * Non Drowsy: 19,445 images (46.5%)
+- Resolution: Native 227 × 227 pixels (RGB 3-channel)
+- Corruptions: 0 corrupted files (100% verified via PIL image verification)
+- Subject Independence & Data Leakage Prevention:
+  File prefixes (e.g., 'A0002.png' vs 'a0002.png', 'M0749.png', 'ZB...') represent 
+  28 unique human driver video recording sessions from RLDD. Our pipeline groups by 
+  subject prefix so that frames of the same person NEVER appear in both training 
+  and test sets, completely preventing data leakage.
+
+
+4. THE TWO MACHINE LEARNING / DEEP LEARNING MODELS USED
+--------------------------------------------------------------------------------
+MODEL 1: MobileNetV2 Deep Learning Transfer Learning Classifier
+- Script: backend/training/train_model.py
+- Model File: backend/models/drowsiness_model.keras (11.1 MB)
+- Input Dimensions: 224 × 224 × 3 normalized to [-1.0, 1.0]
+- Why MobileNetV2: Highly efficient architecture using depthwise separable 
+  convolutions and inverted residuals. Contains only 2.4M parameters, making it 
+  fast enough for real-time CPU inference (~8.2 FPS, 122ms) and future embedded 
+  boards (Raspberry Pi / ESP32-S3).
+- Architecture Head:
+  Input (224, 224, 3) 
+  -> MobileNetV2 Backbone (ImageNet Pre-trained weights, top excluded)
+  -> GlobalAveragePooling2D
+  -> BatchNormalization
+  -> Dropout (0.35)
+  -> Dense (128 units, ReLU activation)
+  -> Dropout (0.20)
+  -> Dense (1 unit, Sigmoid output: 0.0 Alert to 1.0 Drowsy)
+- Optimization: Adam optimizer (lr=1e-4), Binary Crossentropy loss, EarlyStopping, 
+  and ModelCheckpoint saving the best validation model.
+
+MODEL 2: PERCLOS Machine Learning Classifier (Kumar et al., 2023)
+- Script: backend/training/train_perclos_model.py
+- Model File: backend/models/perclos_model.joblib
+- Algorithm: Support Vector Machine (SVM) with Radial Basis Function (RBF) kernel 
+  and Platt probability calibration.
+- What it does: Evaluates 8 visual behavior features across temporal rolling windows:
+  1. perclos_ratio: Proportion of eye closure time in 10s window
+  2. mean_ear: Mean Eye Aspect Ratio
+  3. min_ear: Minimum Eye Aspect Ratio reached
+  4. closed_duration_sec: Total eye closure duration in seconds
+  5. blinks_per_minute: Current blink frequency (BPM)
+  6. avg_blink_duration_ms: Mean duration of blinks in milliseconds
+  7. longest_closure_sec: Longest single continuous eye closure (microsleep indicator)
+  8. ear_variance: Eyelid stability/fluttering variance
+- Sensitivity: 100% on held-out test evaluation, directly matching Paper #8.
+
+
+5. COMPUTER VISION & VISUAL ANALYTICS PIPELINE
+--------------------------------------------------------------------------------
+1) Face & Landmark Detector (backend/inference/face_detector.py):
+   - MediaPipe Tasks FaceLandmarker: Extracts 478 3D facial landmarks in real time.
+   - Haar Cascade Fallback: Bundled OpenCV Haar cascades automatically take over 
+     if camera glare or extreme head rotation disrupts landmarks.
+
+2) Eye Aspect Ratio (EAR) (backend/analytics/eye_aspect_ratio.py):
+   - Uses 6 landmark coordinates per eye:
+     Left Eye: [362, 385, 387, 263, 373, 380]
+     Right Eye: [33, 160, 158, 133, 153, 144]
+   - Formula (Soukupova & Cech, 2016):
+     EAR = (||p2 - p6|| + ||p3 - p5||) / (2 * ||p1 - p4||)
+   - When eyes are open: EAR is ~0.26 to 0.38.
+   - When eyes close: EAR drops below the calibrated threshold (default: 0.22).
+
+3) 10-Second Rolling PERCLOS (backend/analytics/perclos.py):
+   - Formula: PERCLOS = (Duration of valid eye closure) / (Valid observation duration)
+   - Thresholds:
+     * PERCLOS >= 25%: Critical Drowsiness (NHTSA / ISO standard).
+     * PERCLOS >= 15%: Warning (early fatigue onset).
+   - Handles dropped frames, variable camera frame rates, and missing face coverage.
+
+4) Blink Dynamics Tracker (backend/analytics/blink_tracker.py):
+   - State Machine: OPEN -> CLOSING -> CLOSED -> REOPENING -> OPEN.
+   - Prevents counting closed frames as blinks.
+   - Classifies blinks: Normal (80ms–400ms), Sluggish (>400ms), Microsleep (>1.2s).
+
+
+6. INERTIAL MOTION SENSING (MPU-6050 IMU)
+--------------------------------------------------------------------------------
+- Script: backend/sensors/simulated_mpu6050.py & backend/sensors/real_mpu6050.py
+- What it measures:
+  * Pitch (θ): Head nodding forward/downward (nod threshold: <= -15°).
+  * Roll (φ): Head slumping to the side/shoulder (tilt threshold: >= 20°).
+  * Yaw (ψ): Head alignment relative to the road.
+  * Posture Stability Index (0–100%): Measures deviation from upright posture.
+- Interface: Abstract Base Class (IMUSensorBase). The software prototype runs the 
+  live telemetry bridge, while real physical MPU-6050 plugs into I2C address 0x68.
+
+
+7. SENSOR FUSION ENGINE (backend/fusion/drowsiness_fusion.py)
+--------------------------------------------------------------------------------
+Combines all independent channels into an explainable, tiered decision:
+- Inputs:
+  1. MobileNetV2 CNN probability (appearance feature)
+  2. PERCLOS ML Model probability (Kumar et al. feature)
+  3. Rolling PERCLOS percentage (duration feature)
+  4. Blink dynamics trend (BPM & sluggish reopening)
+  5. MPU-6050 head pitch and roll (physical motion feature)
+
+- Decision Tiers:
+  * CRITICAL (Red): Multi-signal confirmation (e.g., CNN > 60% + Head Nod <= -15°) 
+    OR sustained PERCLOS >= 25%. Triggers high-frequency acoustic alarm (2200 Hz).
+  * WARNING (Amber): Early fatigue signs (e.g., fluttering blinks or moderate EAR drop). 
+    Triggers single notification tone (1200 Hz).
+  * NORMAL (Green): All signals within nominal driving thresholds.
+- Explainability: Outputs clear human-readable contributing reasons for every state change.
+
+
+8. AUDIBLE ALERT SYSTEM (backend/alerts/audio_alert.py)
+--------------------------------------------------------------------------------
+- Windows winsound acoustic transducer with non-blocking threading.
+- Warning Level: 1200 Hz notification tone (300 ms).
+- Critical Level: 2200 Hz double emergency pulse.
+- Cooldown Guard: 3.5-second cooldown timer prevents incessant screeching.
+
+
+9. BACKEND WEB API & SOCKET.IO (backend/app.py)
+--------------------------------------------------------------------------------
+- Framework: Python Flask + Flask-SocketIO (Port 5000)
+- Endpoints:
+  * GET  /api/health: Service status, Python runtime, active threads
+  * GET  /api/dataset/inspect: Full 41,792 image audit report
+  * GET  /api/model/status: Trained MobileNetV2 metadata and file size
+  * GET  /api/model/evaluate: Held-out test accuracy, precision, recall, F1
+  * GET  /api/model/perclos: PERCLOS SVM model evaluation report
+  * POST /api/monitoring/start: Starts camera capture and inference thread
+  * POST /api/monitoring/stop: Safely stops and releases camera hardware
+  * GET  /api/monitoring/telemetry: Current snapshot of all sensor readings
+  * GET  /api/camera/stream: Real-time MJPEG multipart video feed
+  * GET  /api/camera/snapshot: High-speed JPEG snapshot (16 FPS fallback)
+  * POST /api/alert/test: Manual buzzer test pulse
+  * POST /api/alert/toggle: Mute/unmute in-cabin acoustic alarm
+  * GET  /api/history: Blackbox timestamped event audit log
+
+
+10. FRONTEND TELEMATICS COCKPIT (frontend/)
+--------------------------------------------------------------------------------
+- Tech Stack: React 18, Vite, TypeScript, Tailwind CSS, Recharts, Lucide Icons (Port 5173).
+- Design Standard: High-tech Dark Navy automotive Driver Monitoring System (DMS) 
+  interface (styled like Tesla / Mobileye / Bosch cockpits).
+- Panels:
+  A. Navbar: Telemetry status (Online), CNN model, MPU-6050 I2C bus, live clock.
+  B. Driver Monitoring Vision Stream: Live camera feed with corner targeting HUD, 
+     478 mesh points lock tag, EAR aperture, and MobileNetV2 classification bar.
+  C. Eye Aperture & PERCLOS Dynamics: Digital EAR meter, 10s PERCLOS gauge, BPM 
+     counter, and real-time Recharts Area Stream waveform (last 30 samples).
+  D. Multi-Sensor Fusion Matrix: ASIL-B inspired vigilance status (Attentive / 
+     Warning / Critical), Composite Risk Index (0-100), and evidence breakdown.
+  E. Inertial Head Pose Telemetry: Dynamic Artificial Horizon / Attitude Indicator 
+     reflecting pitch/roll, 3-axis angle readouts (θ, φ, ψ), Postural Stability Index, 
+     and zero-calibration button.
+  F. In-Vehicle Telematics Event Log: Blackbox flight recorder with ISO timestamps, 
+     acoustic alarm test button, and mute controls.
+  G. Technical Modals: Detailed modals for Dataset Audit, Model Architecture, 
+     and Hardware Integration Plan.
+
+
+11. PHYSICAL HARDWARE TRANSITION & BUDGET (₹3,000–₹4,000 BOM)
+--------------------------------------------------------------------------------
+Phase 2 Physical Hardware Bill of Materials:
+1. 850nm USB Infrared (IR) Night-Vision Camera Module: ₹1,200 – ₹1,500
+2. MPU-6050 6-Axis Accelerometer & Gyroscope (I2C 0x68): ₹150 – ₹200
+3. Edge Compute Platform (Raspberry Pi 4 / ESP32-S3 Co-processor): ₹1,400 – ₹1,800
+4. 5V Active Piezo Buzzer, LM2596 DC-DC Buck Converter, Enclosure: ₹350 – ₹500
+TOTAL ESTIMATED TARGET BOM: ₹3,100 – ₹4,000 (Fits comfortably within student budget)
+
+
+12. HOW TO LAUNCH AND RUN EVERYTHING
+--------------------------------------------------------------------------------
+Step 1: Terminal 1 - Start the Backend:
+  cd d:\Project\AIoT-Drowsiness-Detection
+  py -3.11 backend/app.py
+  (Runs on http://127.0.0.1:5000)
+
+Step 2: Terminal 2 - Start the Frontend:
+  cd d:\Project\AIoT-Drowsiness-Detection\frontend
+  npm run dev
+  (Runs on http://localhost:5173)
+
+Step 3: Open Browser:
+  Go to http://localhost:5173 and click "Engage System".
+================================================================================

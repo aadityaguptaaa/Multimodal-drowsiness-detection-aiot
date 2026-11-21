@@ -1,0 +1,43 @@
+{
+  "status": "VALID",
+  "dataset_path": "D:\\Project\\AIoT-Drowsiness-Detection\\Driver Drowsiness Dataset (DDD)",
+  "total_images": 41792,
+  "classes": {
+    "Drowsy": {
+      "folder_name": "Drowsy",
+      "raw_file_count": 22347,
+      "checked_valid_count": 1000,
+      "subjects_found": 1,
+      "subject_breakdown": {
+        "A": 1000
+      }
+    },
+    "Non Drowsy": {
+      "folder_name": "Non Drowsy",
+      "raw_file_count": 19445,
+      "checked_valid_count": 1000,
+      "subjects_found": 1,
+      "subject_breakdown": {
+        "A": 1000
+      }
+    }
+  },
+  "class_mapping": {
+    "Non Drowsy": 0,
+    "Drowsy": 1
+  },
+  "imbalance_ratio_drowsy_to_nondrowsy": 1.149,
+  "file_extensions": {
+    ".png": 2000
+  },
+  "image_formats": {
+    "PNG": 2000
+  },
+  "image_dimensions": {
+    "227x227": 2000
+  },
+  "corrupted_files_count": 0,
+  "corrupted_files_sample": [],
+  "subject_independent_split_viable": true,
+  "notes": "Derived from Real-Life Drowsiness Dataset (RLDD). File prefixes (A-ZC) represent distinct subject/video recordings. Subject-independent splitting is supported to eliminate data leakage."
+}

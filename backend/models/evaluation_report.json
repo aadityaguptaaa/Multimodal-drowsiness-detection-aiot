@@ -1,0 +1,45 @@
+{
+  "status": "COMPLETED",
+  "model_file": "drowsiness_model.keras",
+  "model_size_mb": 22.77,
+  "test_samples_count": 6269,
+  "accuracy": 0.999,
+  "macro_f1": 0.999,
+  "macro_precision": 0.999,
+  "macro_recall": 0.999,
+  "per_class_metrics": {
+    "Non Drowsy": {
+      "precision": 0.999,
+      "recall": 0.999,
+      "f1_score": 0.999,
+      "test_count": 2917
+    },
+    "Drowsy": {
+      "precision": 0.9991,
+      "recall": 0.9991,
+      "f1_score": 0.9991,
+      "test_count": 3352
+    }
+  },
+  "confusion_matrix": {
+    "true_negative_alert_correct": 2914,
+    "false_positive_alert_wrong": 3,
+    "false_negative_drowsy_missed": 3,
+    "true_positive_drowsy_caught": 3349
+  },
+  "latency_benchmark": {
+    "average_latency_ms": 115.03,
+    "std_latency_ms": 1.67,
+    "approximate_fps": 8.7,
+    "benchmark_iterations": 100
+  },
+  "safety_failure_analysis": {
+    "false_negatives": 3,
+    "false_positives": 3,
+    "true_positives": 3349,
+    "true_negatives": 2914,
+    "false_negative_safety_impact": "CRITICAL: A False Negative occurs when a drowsy driver is misclassified as alert. In road-safety systems, this is the most dangerous failure mode as it fails to trigger alerts. Our secondary visual signals (Rolling PERCLOS and Blink Tracker) and MPU6050 head tilt fusion specifically guard against this failure point.",
+    "false_positive_convenience_impact": "MODERATE: A False Positive flags an alert driver as drowsy (nuisance alarm). Excessive false positives cause alarm fatigue, which our temporal smoothing and 10s PERCLOS window mitigate.",
+    "domain_shift_notice": "Trained on RGB images from DDD. Transitioning to future IR camera or night-time conditions will require calibration or domain adaptation as documented in the research presentation."
+  }
+}
